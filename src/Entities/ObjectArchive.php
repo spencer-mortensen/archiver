@@ -31,26 +31,26 @@ class ObjectArchive
 	private $class;
 	private $properties;
 
-	public function __construct(string $id, string $class, array $properties = null)
+	public function __construct(int $id, string $class, array $properties = null)
 	{
 		$this->id = $id;
 		$this->class = $class;
 		$this->properties = $properties;
 	}
 
-	public function getId()
+	public function getId(): int
 	{
 		return $this->id;
 	}
 
-	public function getClass()
+	public function getClass(): string
 	{
 		return $this->class;
 	}
 
 	public function setProperties(array $properties)
 	{
-		return $this->properties = $properties;
+		$this->properties = $properties;
 	}
 
 	public function getProperties()

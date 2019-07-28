@@ -32,10 +32,16 @@ use ReflectionClass;
 class Archiver
 {
 	private $archivedObjects;
+	private $archivedObjectIds;
 
 	public function __construct()
 	{
+		// The function 'spl_object_hash' returns a value which is guaranteed
+		// to be unique, but only so long as the object persists in memory.
+		// So we hold the object in memory, here, to guarantee uniqueness:
 		$this->archivedObjects = [];
+		$this->archivedObjectIds = [];
+		$this->archivedResourceIds = [];
 	}
 
 	public function archive($value)
@@ -57,12 +63,15 @@ class Archiver
 
 	private function getObject($object): ObjectArchive
 	{
-		$id = spl_object_hash($object);
-		$archivedObject = &$this->archivedObjects[$id];
+		$hash = spl_object_hash($object);
+		$archivedObject = &$this->archivedObjects[$hash];
 
 		if (!isset($archivedObject)) {
+			$id = $this->getId($this->archivedObjectIds, $hash);
 			$class = get_class($object);
+
 			$archivedObject = new ObjectArchive($id, $class);
+
 			$properties = $this->getObjectProperties($object);
 			$archivedObject->setProperties($properties);
 		}
@@ -78,13 +87,15 @@ class Archiver
 
 		do {
 			$className = $class->getName();
+			$archivedProperties = &$archive[$className];
+			$archivedProperties = [];
 
 			foreach ($class->getProperties() as $property) {
 				$property->setAccessible(true);
 				$propertyName = $property->getName();
 				$propertyValue = $property->getValue($object);
 
-				$archive[$className][$propertyName] = $this->archive($propertyValue);
+				$archivedProperties[$propertyName] = $this->archive($propertyValue);
 			}
 
 			$class = $class->getParentClass();
@@ -106,9 +117,21 @@ class Archiver
 
 	private function getResource($resource): ResourceArchive
 	{
-		$id = (integer)$resource;
+		$index = (integer)$resource;
+		$id = $this->getId($this->archivedResourceIds, $index);
 		$type = get_resource_type($resource);
 
 		return new ResourceArchive($id, $type);
+	}
+
+	private function getId(array &$ids, $name)
+	{
+		$id = &$ids[$name];
+
+		if ($id === null) {
+			$id = count($ids) - 1;
+		}
+
+		return $id;
 	}
 }
